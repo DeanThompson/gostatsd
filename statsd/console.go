@@ -2,7 +2,7 @@ package statsd
 
 import (
 	"fmt"
-	"github.com/kisielk/cmd"
+	"github.com/fabware/cmd"
 	"net"
 )
 
