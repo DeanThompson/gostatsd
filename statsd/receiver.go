@@ -110,9 +110,36 @@ func parseLine(line []byte) (Metric, error) {
 		return metric, fmt.Errorf("error converting metric value: %s", err)
 	}
 
-	metricType := buf.Bytes()
+	typ, err := buf.ReadBytes('|')
 	if err != nil && err != io.EOF {
 		return metric, fmt.Errorf("error parsing metric type: %s", err)
+	}
+	metricType := ""
+	if typ[len(typ)-1] == '|' {
+		metricType = string(typ[:len(typ)-1])
+	} else {
+		metricType = string(typ)
+	}
+
+	sampleRate := buf.Bytes()
+	if err != nil && err != io.EOF {
+		return metric, fmt.Errorf("error parsing metric sample rate: %s", err)
+	}
+
+	if len(sampleRate) == 0 {
+		metric.SampleRate = 1.0
+	} else {
+		if sampleRate[0] != '@' {
+			return metric, fmt.Errorf("error parsing metric sample rate, no prefix @")
+		} else {
+			metric.SampleRate, err = strconv.ParseFloat(string(sampleRate[1:len(sampleRate)]), 64)
+			if err != nil {
+				return metric, fmt.Errorf("error converting metric sample rate: %s", err)
+			}
+			if metric.SampleRate > 1.0 || metric.SampleRate <= 0.0 {
+				return metric, fmt.Errorf("error converting metric sample rate, value out of range (0, 1]")
+			}
+		}
 	}
 
 	switch string(metricType[:len(metricType)]) {

@@ -27,13 +27,14 @@ type MetricSender interface {
 // Incoming metrics should be sent to the MetricChan channel.
 type MetricAggregator struct {
 	sync.Mutex
-	MetricChan    chan Metric   // Channel on which metrics are received
-	FlushInterval time.Duration // How often to flush metrics to the sender
-	Sender        MetricSender  // The sender to which metrics are flushed
-	Stats         metricAggregatorStats
-	Counters      MetricMap
-	Gauges        MetricMap
-	Timers        MetricListMap
+	MetricChan     chan Metric   // Channel on which metrics are received
+	FlushInterval  time.Duration // How often to flush metrics to the sender
+	Sender         MetricSender  // The sender to which metrics are flushed
+	Stats          metricAggregatorStats
+	Counters       MetricMap
+	Gauges         MetricMap
+	Timers         MetricListMap
+	TimersCounters MetricMap
 }
 
 // NewMetricAggregator creates a new MetricAggregator object
@@ -45,6 +46,7 @@ func NewMetricAggregator(sender MetricSender, flushInterval time.Duration) Metri
 	a.Counters = make(MetricMap)
 	a.Gauges = make(MetricMap)
 	a.Timers = make(MetricListMap)
+	a.TimersCounters = make(MetricMap)
 	return a
 }
 
@@ -58,8 +60,8 @@ func (a *MetricAggregator) flush() (metrics MetricMap) {
 
 	for k, v := range a.Counters {
 		perSecond := v / a.FlushInterval.Seconds()
-		metrics["stats."+k] = perSecond
-		metrics["stats_counts."+k] = v
+		metrics["stats.counters.rate."+k] = perSecond
+		metrics["stats.counters.count."+k] = v
 		numStats += 1
 	}
 
@@ -68,6 +70,7 @@ func (a *MetricAggregator) flush() (metrics MetricMap) {
 		numStats += 1
 	}
 
+	// TODO: add more stats here
 	for k, v := range a.Timers {
 		if count := len(v); count > 0 {
 			sort.Float64s(v)
@@ -95,6 +98,7 @@ func (a *MetricAggregator) Reset() {
 
 	for k := range a.Timers {
 		a.Timers[k] = []float64{}
+		a.TimersCounters[k] = 0
 	}
 
 	// No reset for gauges, they keep the last value
@@ -108,20 +112,30 @@ func (a *MetricAggregator) receiveMetric(m Metric) {
 	switch m.Type {
 	case COUNTER:
 		v, ok := a.Counters[m.Bucket]
+		value := m.Value
+		if m.SampleRate < 1.0 {
+			value = m.Value * (1 / m.SampleRate)
+		}
 		if ok {
-			a.Counters[m.Bucket] = v + m.Value
+			a.Counters[m.Bucket] = v + value
 		} else {
-			a.Counters[m.Bucket] = m.Value
+			a.Counters[m.Bucket] = value
 		}
 	case GAUGE:
 		a.Gauges[m.Bucket] = m.Value
 	case TIMER:
 		v, ok := a.Timers[m.Bucket]
+		counterValue := 1.0
+		if m.SampleRate < 1.0 {
+			counterValue = 1.0 / m.SampleRate
+		}
 		if ok {
 			v = append(v, m.Value)
 			a.Timers[m.Bucket] = v
+			a.TimersCounters[m.Bucket] += counterValue
 		} else {
 			a.Timers[m.Bucket] = []float64{m.Value}
+			a.TimersCounters[m.Bucket] = counterValue
 		}
 	case ERROR:
 		a.Stats.BadLines += 1

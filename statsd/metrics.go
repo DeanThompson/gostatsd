@@ -30,13 +30,14 @@ func (m MetricType) String() string {
 
 // Metric represents a single data collected datapoint
 type Metric struct {
-	Type   MetricType // The type of metric
-	Bucket string     // The name of the bucket where the metric belongs
-	Value  float64    // The numeric value of the metric
+	Type       MetricType // The type of metric
+	Bucket     string     // The name of the bucket where the metric belongs
+	Value      float64    // The numeric value of the metric
+	SampleRate float64    // The sample rate of the metric
 }
 
 func (m Metric) String() string {
-	return fmt.Sprintf("{%s, %s, %f}", m.Type, m.Bucket, m.Value)
+	return fmt.Sprintf("{%s, %s, %f, %f}", m.Type, m.Bucket, m.Value, m.SampleRate)
 }
 
 // MetricMap is used for storing aggregated Metric values.
@@ -51,7 +52,7 @@ func (m MetricMap) String() string {
 	return buf.String()
 }
 
-// MetricListMap is simlar to MetricMap but instead of storing a single aggregated 
+// MetricListMap is simlar to MetricMap but instead of storing a single aggregated
 // Metric value it stores a list of all collected values.
 type MetricListMap map[string][]float64
 

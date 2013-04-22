@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/fabware/gostatsd/statsd"
+	// "github.com/fabware/gostatsd/statsd"
+	"../statsd"
 	"log"
 	"time"
 )
