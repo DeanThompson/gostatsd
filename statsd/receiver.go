@@ -70,6 +70,7 @@ func (srv *MetricReceiver) handleMessage(addr net.Addr, msg []byte) {
 	buf := bytes.NewBuffer(msg)
 	for {
 		line, err := buf.ReadBytes('\n')
+		// log.Println("handle msg", string(line), msg, err)
 		if err == io.EOF {
 			break
 		}

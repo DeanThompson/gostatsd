@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	defaultMetricsAddr   = ":8125"
-	defaultConsoleAddr   = ":8126"
+	defaultMetricsAddr   = "localhost:8125"
+	defaultConsoleAddr   = "localhost:8126"
 	defaultGraphiteAddr  = "localhost:2003"
 	defaultFlushInterval = 10 * time.Second
 )

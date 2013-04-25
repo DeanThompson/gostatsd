@@ -1,12 +1,24 @@
 package statsd
 
-import (
+/* import (
 	"math"
 )
+*/
 
 // round rounds a number to its nearest integer value
+/*
 func round(v float64) float64 {
 	return math.Floor(v + 0.5)
+}
+*/
+
+func round(value float64) int {
+	if value < 0.0 {
+		value -= 0.5
+	} else {
+		value += 0.5
+	}
+	return int(value)
 }
 
 // average computes the average (mean) of a list of numbers

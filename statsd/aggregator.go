@@ -1,8 +1,11 @@
 package statsd
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -70,20 +73,89 @@ func (a *MetricAggregator) flush() (metrics MetricMap) {
 		numStats += 1
 	}
 
-	// TODO: add more stats here
+	// TODO: add histogram
+	pctThreshold := []int{95}
+	timerData := make(map[string]map[string]float64, 10)
 	for k, v := range a.Timers {
 		if count := len(v); count > 0 {
 			sort.Float64s(v)
 			min := v[0]
 			max := v[count-1]
 
-			metrics["stats.timers."+k+".lower"] = min
-			metrics["stats.timers."+k+".upper"] = max
-			metrics["stats.timers."+k+".count"] = float64(count)
+			currTimerData := make(map[string]float64, 10)
+			var sum, mean float64
+			cumulativeValues := make([]float64, count)
+			thresholdBoundary := max
+
+			// 计算每个点的累计求和
+			cumulativeValues[0] = v[0]
+			for i := 1; i < count; i++ {
+				cumulativeValues[i] = cumulativeValues[i-1] + v[i]
+			}
+
+			for _, pct := range pctThreshold {
+				if count > 1 {
+					numInThreshold := round(math.Abs(float64(pct)) * float64(count) / 100.0)
+					if numInThreshold == 0 {
+						continue
+					}
+					if pct > 0 {
+						thresholdBoundary = v[numInThreshold-1]
+						sum = cumulativeValues[numInThreshold-1]
+					} else {
+						thresholdBoundary = v[count-numInThreshold]
+						sum = cumulativeValues[count-1] - cumulativeValues[count-numInThreshold]
+					}
+					mean = sum / float64(numInThreshold)
+					cleanPct := strings.Replace(fmt.Sprintf("%d", pct), "-", "top", -1)
+					log.Println(cleanPct, pct)
+					var uplowPrefix string
+					if pct > 0 {
+						uplowPrefix = "upper_"
+					} else {
+						uplowPrefix = "lower_"
+					}
+					currTimerData["mean_"+cleanPct] = mean
+					currTimerData[uplowPrefix+cleanPct] = thresholdBoundary
+					currTimerData["sum_"+cleanPct] = sum
+				}
+			}
+
+			sum = cumulativeValues[count-1]
+			mean = sum / float64(count)
+			sumOfDiffs := 0.0
+			median := 0.0
+			for i := 0; i < count; i++ {
+				sumOfDiffs += (v[i] - mean) * (v[i] - mean)
+			}
+
+			mid := int64(math.Floor(float64(count) / 2.0))
+			if count%2 == 1 {
+				median = v[mid]
+			} else {
+				median = (v[mid-1] + v[mid]) / 2
+			}
+			stddev := math.Sqrt(sumOfDiffs / float64(count))
+			currTimerData["std"] = stddev
+			currTimerData["count_ps"] = a.TimersCounters[k] / a.FlushInterval.Seconds()
+			currTimerData["sum"] = sum
+			currTimerData["mean"] = mean
+			currTimerData["median"] = median
+			currTimerData["lower"] = min
+			currTimerData["upper"] = max
+			currTimerData["count"] = float64(count)
+
 			numStats += 1
+			timerData[k] = currTimerData
+		}
+		for k, v := range timerData {
+			for k2, v2 := range v {
+				metrics["stats.timers."+k+"."+k2] = v2
+			}
 		}
 	}
 	metrics["statsd.numStats"] = float64(numStats)
+	// log.Println(metrics)
 	return metrics
 }
 
