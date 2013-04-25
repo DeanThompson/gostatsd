@@ -12,6 +12,8 @@ import (
 // DefaultMetricsAddr is the default address on which a MetricReceiver will listen
 const DefaultMetricsAddr = ":8125"
 
+// var msgCounter int64
+
 // Objects implementing the Handler interface can be used to handle metrics for a MetricReceiver
 type Handler interface {
 	HandleMetric(m Metric)
@@ -78,6 +80,10 @@ func (srv *MetricReceiver) handleMessage(addr net.Addr, msg []byte) {
 			log.Printf("error reading message from %s: %s", addr, err)
 			return
 		}
+
+		// print msg counter
+		// msgCounter += 1
+		// fmt.Println("msg #", msgCounter)
 
 		lineLength := len(line)
 		// Only process lines with more than one character
