@@ -108,7 +108,6 @@ func (a *MetricAggregator) flush() (metrics MetricMap) {
 					}
 					mean = sum / float64(numInThreshold)
 					cleanPct := strings.Replace(fmt.Sprintf("%d", pct), "-", "top", -1)
-					log.Println(cleanPct, pct)
 					var uplowPrefix string
 					if pct > 0 {
 						uplowPrefix = "upper_"

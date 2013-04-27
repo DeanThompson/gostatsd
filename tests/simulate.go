@@ -45,6 +45,6 @@ func main() {
 		client.Timing(bucket, processTime)
 		// client.Increment(bucket)
 		fmt.Println("timing:", bucket, processTime)
-		// time.Sleep(1 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 }
