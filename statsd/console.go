@@ -2,8 +2,9 @@ package statsd
 
 import (
 	"fmt"
-	"github.com/fabware/cmd"
 	"net"
+
+	"github.com/kisielk/cmd"
 )
 
 // DefaultConsoleAddr is the default address on which a ConsoleServer will listen

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/kisielk/gostatsd/statsd"
+	"github.com/DeanThompson/gostatsd/statsd"
 	"log"
 )
 

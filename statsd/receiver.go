@@ -12,8 +12,6 @@ import (
 // DefaultMetricsAddr is the default address on which a MetricReceiver will listen
 const DefaultMetricsAddr = ":8125"
 
-// var msgCounter int64
-
 // Objects implementing the Handler interface can be used to handle metrics for a MetricReceiver
 type Handler interface {
 	HandleMetric(m Metric)
@@ -71,29 +69,32 @@ func (r *MetricReceiver) Receive(c net.PacketConn) error {
 func (srv *MetricReceiver) handleMessage(addr net.Addr, msg []byte) {
 	buf := bytes.NewBuffer(msg)
 	for {
-		line, err := buf.ReadBytes('\n')
-		// log.Println("handle msg", string(line), msg, err)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Printf("error reading message from %s: %s", addr, err)
+		line, readerr := buf.ReadBytes('\n')
+
+		// protocol does not require line to end in \n, if EOF use received line if valid
+		if readerr != nil && readerr != io.EOF {
+			log.Printf("error reading message from %s: %s", addr, readerr)
 			return
+		} else if readerr != io.EOF {
+			// remove newline, only if not EOF
+			if len(line) > 0 {
+				line = line[:len(line)-1]
+			}
 		}
 
-		// print msg counter
-		// msgCounter += 1
-		// fmt.Println("msg #", msgCounter)
-
-		lineLength := len(line)
 		// Only process lines with more than one character
-		if lineLength > 1 {
-			metric, err := parseLine(line[:lineLength-1])
+		if len(line) > 1 {
+			metric, err := parseLine(line)
 			if err != nil {
-				log.Println("error parsing line %q from %s: %s", line, addr, err)
+				log.Printf("error parsing line %q from %s: %s", line, addr, err)
 				continue
 			}
 			go srv.Handler.HandleMetric(metric)
+		}
+
+		if readerr == io.EOF {
+			// if was EOF, finished handling
+			return
 		}
 	}
 }

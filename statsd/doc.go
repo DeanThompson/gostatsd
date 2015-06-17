@@ -1,4 +1,4 @@
-/* 
+/*
 
 Package statsd implements functionality for creating servers compatible with the statsd protocol.
 See https://github.com/b/statsd_spec for a description of the protocol.

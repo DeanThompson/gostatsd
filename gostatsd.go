@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	// "github.com/fabware/gostatsd/statsd"
-	"../statsd"
 	"log"
 	"time"
+
+	"github.com/DeanThompson/gostatsd/statsd"
 )
 
 const (
